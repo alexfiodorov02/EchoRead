@@ -175,25 +175,27 @@ final class TTSViewModel: ObservableObject, Loggable {
 
 extension TTSViewModel: PublicationSpeechSynthesizerDelegate {
     public func publicationSpeechSynthesizer(_ synthesizer: PublicationSpeechSynthesizer, stateDidChange synthesizerState: PublicationSpeechSynthesizer.State) {
-        switch synthesizerState {
-        case .stopped:
-            state.showControls = false
-            state.isPlaying = false
-            playingUtterance = nil
-            clearNowPlaying()
+        DispatchQueue.main.async {
+            switch synthesizerState {
+            case .stopped:
+                self.state.showControls = false
+                self.state.isPlaying = false
+                self.playingUtterance = nil
+                self.clearNowPlaying()
 
-        case let .playing(utterance, range: wordRange):
-            state.showControls = true
-            state.isPlaying = true
-            playingUtterance = utterance.locator
-            if let wordRange = wordRange {
-                playingWordRangeSubject.send(wordRange)
+            case let .playing(utterance, range: wordRange):
+                self.state.showControls = true
+                self.state.isPlaying = true
+                self.playingUtterance = utterance.locator
+                if let wordRange = wordRange {
+                    self.playingWordRangeSubject.send(wordRange)
+                }
+
+            case let .paused(utterance):
+                self.state.showControls = true
+                self.state.isPlaying = false
+                self.playingUtterance = utterance.locator
             }
-
-        case let .paused(utterance):
-            state.showControls = true
-            state.isPlaying = false
-            playingUtterance = utterance.locator
         }
     }
 

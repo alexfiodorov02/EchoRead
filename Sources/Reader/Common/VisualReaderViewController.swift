@@ -13,6 +13,14 @@ import UIKit
 
 /// Base class for the reader view controller of a `VisualNavigator`.
 class VisualReaderViewController<N: UIViewController & Navigator>: ReaderViewController<N>, VisualNavigatorDelegate {
+    @objc private func toggleTTS() {
+        guard let ttsViewModel = ttsViewModel else { return }
+        if ttsViewModel.state.isPlaying {
+            ttsViewModel.stop()
+        } else {
+            ttsViewModel.start()
+        }
+    }
     private lazy var positionLabel = UILabel()
 
     private let ttsViewModel: TTSViewModel?
@@ -176,8 +184,8 @@ class VisualReaderViewController<N: UIViewController & Navigator>: ReaderViewCon
         var buttons: [UIBarButtonItem] = super.makeNavigationBarButtons()
 
         // Text to speech
-        if let ttsViewModel = ttsViewModel {
-            buttons.append(UIBarButtonItem(image: UIImage(systemName: "speaker.wave.2.fill"), style: .plain, target: ttsViewModel, action: #selector(TTSViewModel.start)))
+        if ttsViewModel != nil {
+            buttons.append(UIBarButtonItem(image: UIImage(systemName: "speaker.wave.2.fill"), style: .plain, target: self, action: #selector(toggleTTS)))
         }
 
         return buttons
