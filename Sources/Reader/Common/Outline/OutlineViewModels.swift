@@ -74,6 +74,19 @@ final class BookmarksViewModel: ObservableObject, OutlineViewModelLoaderDelegate
     func setLoadedValues(_ values: [Bookmark]) {
         bookmarks = values
     }
+
+    func deleteBookmarks(at offsets: IndexSet) {
+        let idsToDelete = offsets.map { bookmarks[$0].id }
+        bookmarks.remove(atOffsets: offsets)
+
+        Task {
+            for id in idsToDelete {
+                if let id = id {
+                    try? await repository.remove(id)
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Generic state management

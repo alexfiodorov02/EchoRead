@@ -70,12 +70,17 @@ struct OutlineTableView: View {
                 }
 
             case .bookmarks:
-                List(bookmarksModel.bookmarks, id: \.self) { bookmark in
-                    BookmarkCellView(bookmark: bookmark)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            locatorSubject.send(bookmark.locator)
-                        }
+                List {
+                    ForEach(bookmarksModel.bookmarks, id: \.self) { bookmark in
+                        BookmarkCellView(bookmark: bookmark)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                locatorSubject.send(bookmark.locator)
+                            }
+                    }
+                    .onDelete { indexSet in
+                        bookmarksModel.deleteBookmarks(at: indexSet)
+                    }
                 }
                 .onAppear { bookmarksModel.loadIfNeeded() }
             case .highlights:

@@ -175,6 +175,17 @@ class ReaderViewController<N: Navigator>: UIViewController,
             }
         }
     }
+    
+    func removeBookmark(by id: Bookmark.Id) {
+        Task {
+            do {
+                try await bookmarks.remove(id)
+                print("Bookmark removed successfully.")
+            } catch {
+                print("Failed to remove bookmark: \(error)")
+            }
+        }
+    }
 
     // MARK: - Search
 
