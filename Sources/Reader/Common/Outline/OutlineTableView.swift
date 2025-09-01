@@ -84,15 +84,20 @@ struct OutlineTableView: View {
                 }
                 .onAppear { bookmarksModel.loadIfNeeded() }
             case .highlights:
-                List(highlightsModel.highlights, id: \.self) { highlight in
-                    HighlightCellView(highlight: highlight)
-                        .contentShape(Rectangle())
-                        .listRowInsets(EdgeInsets()) // to remove padding at the left side
-                        .onTapGesture {
-                            locatorSubject.send(highlight.locator)
+                    List {
+                        ForEach(highlightsModel.highlights, id: \.self) { highlight in
+                            HighlightCellView(highlight: highlight)
+                                .contentShape(Rectangle())
+                                .listRowInsets(EdgeInsets()) // to remove padding at the left side
+                                .onTapGesture {
+                                    locatorSubject.send(highlight.locator)
+                                }
                         }
-                }
-                .onAppear { highlightsModel.loadIfNeeded() }
+                        .onDelete { indexSet in
+                            highlightsModel.deleteHighlights(at: indexSet)
+                        }
+                    }
+                    .onAppear { highlightsModel.loadIfNeeded() }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

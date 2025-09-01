@@ -12,14 +12,29 @@ import SwiftUI
 
 // MARK: - Highlights
 
-final class HighlightsViewModel: ObservableObject, OutlineViewModelLoaderDelegate {
+final class HighlightsViewModel: ObservableObject {
+    func deleteHighlights(at offsets: IndexSet) {
+        let idsToDelete = offsets.map { highlights[$0].id }
+        highlights.remove(atOffsets: offsets)
+
+        Task {
+            for id in idsToDelete {
+                if let id = id {
+                    try? await repository.remove(id)
+                }
+            }
+        }
+    }
     typealias T = Highlight
     @Published var highlights = [Highlight]()
 
     private let bookId: Book.Id
     private let repository: HighlightRepository
 
-    private lazy var loader: OutlineViewModelLoader<Highlight, HighlightsViewModel> = OutlineViewModelLoader(delegate: self)
+    private lazy var loader: OutlineViewModelLoader<Highlight> = OutlineViewModelLoader(
+        dataTask: { [repository, bookId] in repository.all(for: bookId) },
+        setLoadedValues: { [weak self] values in self?.highlights = values }
+    )
 
     init(bookId: Book.Id, repository: HighlightRepository) {
         self.bookId = bookId
@@ -45,14 +60,17 @@ final class HighlightsViewModel: ObservableObject, OutlineViewModelLoaderDelegat
 
 // MARK: - Bookmarks
 
-final class BookmarksViewModel: ObservableObject, OutlineViewModelLoaderDelegate {
+final class BookmarksViewModel: ObservableObject {
     typealias T = Bookmark
     @Published var bookmarks = [Bookmark]()
 
     private let bookId: Book.Id
     private let repository: BookmarkRepository
 
-    private lazy var loader: OutlineViewModelLoader<Bookmark, BookmarksViewModel> = OutlineViewModelLoader(delegate: self)
+    private lazy var loader: OutlineViewModelLoader<Bookmark> = OutlineViewModelLoader(
+        dataTask: { [repository, bookId] in repository.all(for: bookId) },
+        setLoadedValues: { [weak self] values in self?.bookmarks = values }
+    )
 
     init(bookId: Book.Id, repository: BookmarkRepository) {
         self.bookId = bookId
@@ -91,16 +109,9 @@ final class BookmarksViewModel: ObservableObject, OutlineViewModelLoaderDelegate
 
 // MARK: - Generic state management
 
-private protocol OutlineViewModelLoaderDelegate: AnyObject {
-    associatedtype T
-
-    var dataTask: AnyPublisher<[T], Error> { get }
-    func setLoadedValues(_ values: [T])
-}
 
 // This loader contains a state enum which can be used for expressive UI (loading progress, error handling etc). For this, status overlay view can be used (see https://stackoverflow.com/a/61858358/2567725).
-private final class OutlineViewModelLoader<T, Delegate: OutlineViewModelLoaderDelegate> {
-    weak var delegate: Delegate!
+private final class OutlineViewModelLoader<T> {
     private var state = State.ready
 
     enum State {
@@ -110,13 +121,17 @@ private final class OutlineViewModelLoader<T, Delegate: OutlineViewModelLoaderDe
         case error(Error)
     }
 
-    init(delegate: Delegate) {
-        self.delegate = delegate
+    private let dataTask: () -> AnyPublisher<[T], Error>
+    private let setLoadedValues: ([T]) -> Void
+
+    init(dataTask: @escaping () -> AnyPublisher<[T], Error>, setLoadedValues: @escaping ([T]) -> Void) {
+        self.dataTask = dataTask
+        self.setLoadedValues = setLoadedValues
     }
 
     func load() {
         assert(Thread.isMainThread)
-        state = .loading(delegate.dataTask.sink(
+        state = .loading(dataTask().sink(
             receiveCompletion: { completion in
                 switch completion {
                 case .finished:
@@ -127,7 +142,7 @@ private final class OutlineViewModelLoader<T, Delegate: OutlineViewModelLoaderDe
             },
             receiveValue: { value in
                 self.state = .loaded
-                self.delegate.setLoadedValues(value)
+                self.setLoadedValues(value)
             }
         ))
     }
