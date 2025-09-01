@@ -56,6 +56,14 @@ final class BookmarkRepository {
     @discardableResult
     func add(_ bookmark: Bookmark) async throws -> Bookmark.Id {
         try await db.write { db in
+            let existingBookmark = try Bookmark
+                .filter(Bookmark.Columns.bookId == bookmark.bookId && Bookmark.Columns.progression == bookmark.progression)
+                .fetchOne(db)
+
+            guard existingBookmark == nil else {
+                throw NSError(domain: "BookmarkError", code: 1, userInfo: [NSLocalizedDescriptionKey: "A bookmark already exists on this page."])
+            }
+
             try bookmark.insert(db)
             return Bookmark.Id(rawValue: db.lastInsertedRowID)
         }
